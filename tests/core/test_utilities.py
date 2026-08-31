@@ -571,6 +571,8 @@ REPORT = str(pv.Report(gpu=False))
 
 @pytest.mark.parametrize('package', get_distribution_dependencies('pyvista'))
 def test_report_dependencies(package):
+    # A dependency may be extras-qualified ('cvista[all]'); the report lists the bare name.
+    name = package.split('[', maxsplit=1)[0]
     if package == 'pyvista[colormaps,io,jupyter]':
         pytest.xfail('scooby bug: https://github.com/banesullivan/scooby/issues/129')
     elif package == 'vtk!':
@@ -579,11 +581,11 @@ def test_report_dependencies(package):
         pytest.xfail('pyvista-zstd lands alongside the custom writer registry PR')
     elif package == 'pyobjc-framework-Cocoa' and sys.platform != 'darwin':
         pytest.xfail('package only available on macOS')
-    elif package == 'cvista' and importlib.util.find_spec('cvista') is None:
+    elif name == 'cvista' and importlib.util.find_spec('cvista') is None:
         # cvista is an alternative VTK backend, installed only in the dedicated
         # vtk_cvista CI env (see tox.ini). The report covers it there.
         pytest.skip('cvista (alternative VTK backend) is not installed in this environment')
-    assert package in REPORT, f'Package {package!r} should be defined in Report.__init__'
+    assert name in REPORT, f'Package {name!r} should be defined in Report.__init__'
 
 
 def test_report_downloads():
