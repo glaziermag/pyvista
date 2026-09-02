@@ -1642,7 +1642,8 @@ def test_no_new_attr_mixin_side_effects():
         @foo.setter
         def foo(self, val): ...
 
-    class Child(Parent): ...
+    class Child(Parent):
+        pass
 
     # Test that setting attributes on lasses does not trigger a call to the getter
     obj = Parent()
@@ -2995,7 +2996,8 @@ def _create_state_manager_subclass(arg1, arg2=None, sub_subclass=False):
 
     if sub_subclass:
 
-        class MyState2(MyState): ...
+        class MyState2(MyState):
+            pass
 
         return MyState2
     return MyState
@@ -3059,7 +3061,7 @@ def test_cell_quality_info_valid_measures(info):
     # Ensure the computed measure is not null
     null_value = -1
     qual_value = _compute_unit_cell_quality(info, null_value)
-    if np.isclose(qual_value, null_value):
+    if np.isclose(qual_value, null_value):  # pragma: no cover -- failure path
         pytest.fail(
             f'Measure {info.quality_measure!r} is not valid for cell type {info.cell_type.name!r}'
         )
