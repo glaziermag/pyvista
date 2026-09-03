@@ -1,0 +1,25 @@
+# Repro A — pyvista's CURRENT concurrency key, copied verbatim from
+# .github/workflows/testing-and-deployment.yml lines 16-18 @ 283af704.
+# Two events on the SAME ref (push to main, and a non-push event on main)
+# land in the SAME group, so the later one cancels the earlier one.
+name: repro-a-stock
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  work:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show identity
+        run: |
+          echo "event=${{ github.event_name }}  ref=${{ github.ref }}"
+          echo "group=${{ github.workflow }}-${{ github.ref }}"
+      - name: Long job (stands in for the nightly matrix)
+        run: sleep 300

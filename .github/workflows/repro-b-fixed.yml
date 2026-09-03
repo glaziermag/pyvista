@@ -1,0 +1,23 @@
+# Repro B — identical, except the concurrency group is made event-aware.
+# This is the proposed one-line change.
+name: repro-b-fixed
+
+on:
+  push:
+    branches: [main]
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}
+  cancel-in-progress: true
+
+jobs:
+  work:
+    runs-on: ubuntu-latest
+    steps:
+      - name: Show identity
+        run: |
+          echo "event=${{ github.event_name }}  ref=${{ github.ref }}"
+          echo "group=${{ github.workflow }}-${{ github.ref }}-${{ github.event_name }}"
+      - name: Long job (stands in for the nightly matrix)
+        run: sleep 300
