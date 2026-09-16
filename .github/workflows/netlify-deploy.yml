@@ -41,6 +41,7 @@ jobs:
       pr_number: ${{ steps.parse.outputs.pr_number }}
       head_sha: ${{ steps.parse.outputs.head_sha }}
       is_fork: ${{ steps.parse.outputs.is_fork }}
+      has_artifacts: ${{ steps.artifacts.outputs.has_artifacts }}
     steps:
       - name: Download PR info artifact
         if: github.event.workflow_run.event == 'pull_request'
@@ -57,6 +58,23 @@ jobs:
       # head SHA and fork status come from the event payload, which a fork cannot
       # forge; is_fork picks the deployment environment, so it must never come
       # from the artifact.
+      # A run that never started (a fork PR closed before its runs were approved)
+      # completes as `failure` with no jobs and no artifacts; nothing below can
+      # deploy from it, so the deploy jobs skip instead of waiting for approval.
+      - name: Check whether the parent uploaded anything
+        id: artifacts
+        env:
+          GH_TOKEN: ${{ github.token }}
+          RUN_ID: ${{ github.event.workflow_run.id }}
+          REPO: ${{ github.repository }}
+        run: |
+          count="$(gh api "repos/$REPO/actions/runs/$RUN_ID/artifacts" --jq .total_count)"
+          if [ "$count" -gt 0 ]; then
+            echo "has_artifacts=true" >> "$GITHUB_OUTPUT"
+          else
+            echo "has_artifacts=false" >> "$GITHUB_OUTPUT"
+          fi
+
       - name: Parse PR info
         id: parse
         env:
@@ -84,6 +102,7 @@ jobs:
     # build. Pushes to main: require the whole workflow to succeed so dev
     # docs never publish a failed build.
     if: >-
+      needs.setup.outputs.has_artifacts == 'true' &&
       github.event.workflow_run.name == 'Build Documentation' &&
       (
         (github.event.workflow_run.event == 'pull_request' &&
@@ -178,6 +197,7 @@ jobs:
     # commit is the one that lands, and which still holds the images after a
     # merge skips the rebuild.
     if: >-
+      needs.setup.outputs.has_artifacts == 'true' &&
       (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure') &&
       github.event.workflow_run.name == 'Build Documentation' &&
       (github.event.workflow_run.event == 'pull_request' ||
@@ -280,6 +300,7 @@ jobs:
     # run, whose commit is the one that lands, and which runs the full matrix a
     # merge no longer repeats.
     if: >-
+      needs.setup.outputs.has_artifacts == 'true' &&
       (github.event.workflow_run.conclusion == 'success' || github.event.workflow_run.conclusion == 'failure') &&
       github.event.workflow_run.name == 'Unit Testing and Deployment' &&
       (github.event.workflow_run.event == 'pull_request' ||
